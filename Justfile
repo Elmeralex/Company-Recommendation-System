@@ -17,3 +17,7 @@ down:
 # Replay the registry feed onto the company-events queue.
 publish:
     uv run python -m producer.publish
+
+#Run consumer for first 10
+consumer:
+    uv run python -m app.consumer
