@@ -105,3 +105,33 @@ def get_updated_at(conn, registration_number):
     if row is None:
         return None
     return row["updated_at"]
+
+# Use for service ----
+def get_company(conn, registration_number):
+    row = conn.execute(
+        "SELECT * FROM companies WHERE registration_number = %s",
+        (registration_number,),
+    ).fetchone()
+    return row
+
+#Using pgvector to find similar companies based on the embedding of the nature of business
+def find_similar(conn, registration_number, limit=4):
+    row = conn.execute(
+        "SELECT embedding FROM companies WHERE registration_number = %s",
+        (registration_number,),
+    ).fetchone()
+    if row is None or row["embedding"] is None:
+        return []
+
+    embedding = row["embedding"]
+    rows = conn.execute(
+        """
+        SELECT registration_number, company_name, nature_of_business, state, industry
+        FROM companies
+        WHERE embedding IS NOT NULL AND registration_number != %s
+        ORDER BY embedding <-> %s
+        LIMIT %s
+        """,
+        (registration_number, embedding, limit),
+    ).fetchall()
+    return rows
