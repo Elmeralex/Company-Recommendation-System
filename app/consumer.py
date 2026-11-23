@@ -1,26 +1,13 @@
 import argparse
-import json
 import os
 from typing_extensions import Final
-import warnings
 
 import pika #Get the pika library for RabbitMQ communication
+import app.normalization as normalization #Import the normalization module
+import app.db as db #Import the database module
 
 QUEUE: Final = "company-events"
 RABBITMQ_URL: Final = os.environ.get("RABBITMQ_URL", "amqp://guest:guest@localhost:5672/") #Setu p the RabbitMQ URL from environment variable
-
-def message_validation(body: bytes) -> str:
-    """Return a status for one raw message. Rough checks for exploring only."""
-    try:
-        event = json.loads(body)
-    except json.JSONDecodeError:
-        return "bad-json"
-
-    if not isinstance(event, dict):  #the body is null skip
-        return "skip"
-    if event.get("registrationNumber") is None: #the register number is null skip
-        return "skip"
-    return "saved"
 
 def main() -> None:
     parser = argparse.ArgumentParser()
@@ -38,23 +25,42 @@ def main() -> None:
     if args.read:
         channel.basic_qos(prefetch_count=50)
 
+    conn = db.connect() #Connect to the database using the database module
+    db.create_tables(conn) #Create the tables in the database
+
     for method_frame, properties, body in channel.consume(QUEUE, inactivity_timeout=1):
         if method_frame is None:
             break
 
         #display method_frame
-        print(f"Method Frame: {method_frame} \nProperties: {properties} \nBody: {body.decode()}")
+        print(f"Method Frame: {method_frame} \nProperties: {properties} \n")
 
-        status = message_validation(body)
-        if status == "saved":
-            print("Message is valid and saved.")
+        result = normalization.message_validation(body) #Normalize and validate the message using the normalization module
+        if result["status"] == "saved":
+            print(f"Message is valid: {result['data']}")
+            verify_storage = db.get_updated_at(conn, result["data"]["registrationnumber"])
 
+            description_hash = normalization.get_description_hash(result["data"]["data"]["natureofbusiness"]) 
+            embedding = normalization.get_embedding(result["data"]["data"]["natureofbusiness"]) #Get the embedding for the nature of business using the normalization module
+            
+            if verify_storage is None: #Check if the company already exists in the database
+                db.insert_company(conn, result["data"], description_hash, embedding, properties.message_id) #Insert the valid message into the database using the database module
+            else:
+                if verify_storage < result["data"]["updatedat"]: #Check if the new message is newer than the existing one
+                    db.update_company(conn, result["data"], description_hash, embedding, properties.message_id) #Update the existing company in the database using the database module (only if the new message is newer than the existing one)
+                    print(f"Message is valid and updated: {result['data']['registrationnumber']}")
+        else:
+            print(f"Message is invalid: {result['status']}") #If the status is not, ensure the program still can continue to process the next message without crashing or stopping the program
+            continue
+
+        conn.commit()
         if args.read:
             channel.basic_ack(delivery_tag=method_frame.delivery_tag)
 
     #Close the channel and connection
     channel.cancel()
     connection.close()
+    conn.close()
 
 if __name__ == "__main__":
     main()
