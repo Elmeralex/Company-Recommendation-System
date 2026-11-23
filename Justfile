@@ -32,5 +32,10 @@ consumer:
     uv run python -m app.consumer
 
 # Run the API server on port 8000.
-api:
+interface:
     uv run uvicorn app.api:app --port 8000
+
+# Run all tests (needs `just up` and the data loaded).
+test:
+    uv run pytest app/testing/test_api.py -v
+    uv run pytest app/testing/test_normalization.py -v

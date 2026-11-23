@@ -24,7 +24,7 @@ async def get_company(registration_number: str):
 #Get similar companies for a given registration number
 @app.get("/company/{registration_number}/similar")
 async def get_similar_companies(registration_number: str):
-    similar_companies = service.get_similar_companies(registration_number)
-    if not similar_companies:
-        raise HTTPException(status_code=404, detail="No similar companies found")
-    return similar_companies
+    company = service.get_company(registration_number)
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+    return service.get_similar_companies(registration_number)
