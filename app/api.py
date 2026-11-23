@@ -1,9 +1,18 @@
-import psycopg
-from fastapi import FastAPI, HTTPException, Query
+from pathlib import Path
+from fastapi import FastAPI, HTTPException
+from fastapi.responses import HTMLResponse
 from app import service
 
 app = FastAPI()
 
+#Interface 
+INDEX_PAGE = Path(__file__).parent / "index.html"
+
+@app.get("/", response_class=HTMLResponse, include_in_schema=False)
+def index():
+    return INDEX_PAGE.read_text(encoding="utf-8")
+
+#-----------
 #Get the company for a given registration number
 @app.get("/company/{registration_number}")
 async def get_company(registration_number: str):
