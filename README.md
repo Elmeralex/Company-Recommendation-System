@@ -10,6 +10,19 @@ pgvector.
 
 Assessment version: **2026.11** (`mle-v2026.11`). What changed between versions is in [`CHANGELOG.md`](CHANGELOG.md).
 
+
+## How to run
+```bash
+1. just setup      # install the producer's dependencies
+2. just up         # start Postgres (with pgvector) and RabbitMQ
+3. just consumer   # start the consumer get ready to recieve the message
+4. just publish    # publish the registry feed to the queue (Open another terminate)
+5. just interface  # start the Interface, then open http://127.0.0.1:8000/
+6. just test       # Run the testing
+
+just down       # stop everything and delete the data
+```
+
 ## The scenario
 
 When someone opens a company's page on the OneCredit portal, we want to show a **"Similar companies"** panel next to
