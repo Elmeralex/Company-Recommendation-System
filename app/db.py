@@ -60,15 +60,15 @@ def insert_company(conn, event, description_hash, embedding, message_id):
 def update_company(conn, event, description_hash, embedding, message_id):
     conn.execute(
         """
-        UPDATE companies
-        SET company_name = %s,
-            nature_of_business = %s,
-            state = %s,
-            industry = %s,
-            description_hash = %s,
-            embedding = %s,
-            updated_at = %s,
-            last_message_id = %s
+            UPDATE companies
+            SET company_name    = COALESCE(%s, company_name),
+            nature_of_business  = COALESCE(%s, nature_of_business),
+            state               = COALESCE(%s, state),
+            industry            = COALESCE(%s, industry),
+            description_hash    = COALESCE(%s, description_hash),
+            embedding           = COALESCE(%s, embedding),
+            updated_at          = %s,
+            last_message_id     = %s
         WHERE registration_number = %s
         """,
         (
